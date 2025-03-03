@@ -95,6 +95,32 @@ class PaddleOCR:
         return []
 """)
     
+    # Create a mock ultralytics module
+    with open("OmniParser-master/mocks/ultralytics.py", "w") as f:
+        f.write("""# Mock ultralytics module
+import numpy as np
+
+class YOLO:
+    def __init__(self, model_path, **kwargs):
+        self.model_path = model_path
+        self.kwargs = kwargs
+        
+    def predict(self, img, **kwargs):
+        # Return empty result
+        class Results:
+            def __init__(self):
+                self.boxes = Boxes()
+                self.names = {"0": "unknown"}
+                
+        class Boxes:
+            def __init__(self):
+                self.xyxy = np.zeros((0, 4))
+                self.cls = np.zeros(0)
+                self.conf = np.zeros(0)
+                
+        return [Results()]
+""")
+    
     # Create a mock patch for sys.modules
     with open("OmniParser-master/util/mock_imports.py", "w") as f:
         f.write("""# Mock imports for OmniParser
@@ -121,6 +147,14 @@ if "paddleocr" not in sys.modules:
     except ImportError:
         import mocks.paddleocr as paddleocr
         sys.modules["paddleocr"] = paddleocr
+
+# Mock ultralytics if needed
+if "ultralytics" not in sys.modules:
+    try:
+        import ultralytics
+    except ImportError:
+        import mocks.ultralytics as ultralytics
+        sys.modules["ultralytics"] = ultralytics
 """)
     
     # Modify the OmniParser's utils.py to import our patch
