@@ -1,0 +1,30 @@
+services:
+  # A web service for OmniParser
+  - type: web
+    name: omniparser-api
+    runtime: python
+    plan: pro
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    # Use mounted disk to store data and cache
+    disk:
+      name: omniparser-disk
+      mountPath: /opt/render/project/src/.cache
+      sizeGB: 10
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: DEVICE
+        value: "cpu"
+      - key: CAPTION_MODEL_PATH
+        value: "microsoft/Florence-2-base"
+      - key: CAPTION_MODEL_NAME
+        value: "florence2"
+      - key: SOM_MODEL_PATH
+        value: "weights/icon_detect/model.pt"
+      - key: BOX_THRESHOLD
+        value: "0.05"
+      - key: TRANSFORMERS_CACHE
+        value: /opt/render/project/src/.cache/huggingface
+      - key: HF_HOME
+        value: /opt/render/project/src/.cache/huggingface 

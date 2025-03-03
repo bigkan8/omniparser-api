@@ -1,0 +1,26 @@
+# FastAPI dependencies
+fastapi>=0.109.0
+uvicorn>=0.25.0
+pydantic>=2.4.2
+
+# OmniParser core dependencies
+torch>=2.0.1
+torchvision>=0.15.2
+numpy>=1.26.4
+pillow>=9.3.0
+transformers>=4.30.2
+accelerate>=0.20.3
+huggingface-hub>=0.16.4
+supervision==0.18.0
+opencv-python-headless>=4.8.0
+easyocr>=1.7.0
+paddlepaddle-cpu>=2.5.2
+paddleocr>=2.7.0
+
+# Florence-2 model dependencies
+timm>=0.9.5
+einops==0.8.0
+
+# Utilities
+tqdm>=4.64.1
+requests>=2.28.1 
