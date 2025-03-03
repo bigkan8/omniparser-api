@@ -4,7 +4,7 @@ services:
     name: omniparser-api
     runtime: python
     plan: pro
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python setup.py
     startCommand: python server.py
     # Use mounted disk to store data and cache
     disk:

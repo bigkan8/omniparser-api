@@ -35,12 +35,29 @@ def download_omniparser():
         logger.error(f"Error cloning OmniParser repository: {str(e)}")
         return False
 
+def patch_omniparser():
+    """Apply patches to OmniParser for compatibility"""
+    logger.info("Applying patches to OmniParser...")
+    
+    try:
+        subprocess.run(["python", "omniparser_patch.py"], check=True)
+        logger.info("Successfully applied patches to OmniParser")
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error applying patches to OmniParser: {str(e)}")
+        return False
+
 def main():
     logger.info("Setting up OmniParser API for Render deployment...")
     
     # Download OmniParser repository
     if not download_omniparser():
         logger.error("Failed to download OmniParser repository")
+        return 1
+    
+    # Apply patches to OmniParser
+    if not patch_omniparser():
+        logger.error("Failed to patch OmniParser")
         return 1
     
     # Download model weights

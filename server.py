@@ -78,7 +78,8 @@ def load_omniparser():
             'caption_model_name': CAPTION_MODEL_NAME,
             'caption_model_path': CAPTION_MODEL_PATH,
             'device': DEVICE,
-            'BOX_TRESHOLD': BOX_THRESHOLD
+            'BOX_TRESHOLD': BOX_THRESHOLD,
+            'use_paddleocr': False  # Force using EasyOCR instead of PaddleOCR
         }
         
         # Initialize the OmniParser

@@ -14,8 +14,6 @@ huggingface-hub>=0.16.4
 supervision==0.18.0
 opencv-python-headless>=4.8.0
 easyocr>=1.7.0
-paddlepaddle-cpu>=2.5.2
-paddleocr>=2.7.0
 
 # Florence-2 model dependencies
 timm>=0.9.5
