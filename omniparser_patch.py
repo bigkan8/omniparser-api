@@ -45,6 +45,13 @@ def patch_utils_file():
                 "check_ocr_box(image, display_img=False, output_bb_format='xyxy', easyocr_args={'text_threshold': 0.8}, use_paddleocr=False)"
             )
     
+    # Conditionally import paddleocr
+    if "from paddleocr import PaddleOCR" in content:
+        content = content.replace(
+            "from paddleocr import PaddleOCR",
+            "# Conditionally import PaddleOCR\ntry:\n    from paddleocr import PaddleOCR\nexcept ImportError:\n    PaddleOCR = None"
+        )
+    
     # Write the modified content back
     with open(utils_file, 'w') as f:
         f.write(content)
@@ -52,8 +59,8 @@ def patch_utils_file():
     logger.info(f"Successfully patched {utils_file}")
     return True
 
-def create_openai_mock():
-    """Create a mock OpenAI module to handle imports"""
+def create_mock_modules():
+    """Create mock modules for dependencies"""
     # Create a directory for our mock modules
     os.makedirs("OmniParser-master/mocks", exist_ok=True)
     
@@ -76,9 +83,21 @@ class ChatCompletions:
         return {"choices": [{"message": {"content": "This is a mock response from the OpenAI API."}}]}
 """)
     
+    # Create a mock paddleocr module
+    with open("OmniParser-master/mocks/paddleocr.py", "w") as f:
+        f.write("""# Mock PaddleOCR module
+class PaddleOCR:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        
+    def ocr(self, img_path, cls=False):
+        # Return empty result
+        return []
+""")
+    
     # Create a mock patch for sys.modules
-    with open("OmniParser-master/util/openai_patch.py", "w") as f:
-        f.write("""# OpenAI patch for OmniParser
+    with open("OmniParser-master/util/mock_imports.py", "w") as f:
+        f.write("""# Mock imports for OmniParser
 import sys
 import importlib.util
 import os
@@ -87,15 +106,21 @@ import os
 mocks_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mocks")
 sys.path.insert(0, mocks_dir)
 
-# Check if openai is already imported
+# Mock OpenAI if needed
 if "openai" not in sys.modules:
     try:
-        # Try to import the real openai module
         import openai
     except ImportError:
-        # If it fails, use our mock
         import mocks.openai as openai
         sys.modules["openai"] = openai
+
+# Mock PaddleOCR if needed
+if "paddleocr" not in sys.modules:
+    try:
+        import paddleocr
+    except ImportError:
+        import mocks.paddleocr as paddleocr
+        sys.modules["paddleocr"] = paddleocr
 """)
     
     # Modify the OmniParser's utils.py to import our patch
@@ -107,14 +132,14 @@ if "openai" not in sys.modules:
     if "import numpy as np" in content:
         content = content.replace(
             "import numpy as np",
-            "import numpy as np\n# Import OpenAI patch\ntry:\n    from util.openai_patch import *\nexcept ImportError:\n    pass"
+            "import numpy as np\n# Import mock modules\ntry:\n    from util.mock_imports import *\nexcept ImportError:\n    pass"
         )
     
     # Write the modified content back
     with open(utils_file, "w") as f:
         f.write(content)
     
-    logger.info("Created OpenAI mock and patch")
+    logger.info("Created mock modules and import patch")
     return True
 
 def main():
@@ -125,9 +150,9 @@ def main():
         logger.error("Failed to patch utils.py file")
         return 1
     
-    # Create OpenAI mock
-    if not create_openai_mock():
-        logger.error("Failed to create OpenAI mock")
+    # Create mock modules
+    if not create_mock_modules():
+        logger.error("Failed to create mock modules")
         return 1
     
     logger.info("Patching completed successfully")
