@@ -49,7 +49,7 @@ def patch_utils_file():
     if "from paddleocr import PaddleOCR" in content:
         content = content.replace(
             "from paddleocr import PaddleOCR",
-            "# Conditionally import PaddleOCR\ntry:\n    from paddleocr import PaddleOCR\nexcept ImportError:\n    PaddleOCR = None"
+            "# Conditionally import PaddleOCR\ntry:\n    from paddleocr import PaddleOCR\nexcept ImportError:\n    # Use a stub class that raises a useful error when called\n    class PaddleOCR:\n        def __init__(self, **kwargs):\n            self.kwargs = kwargs\n        \n        def ocr(self, img_path, cls=False):\n            logger.warning('PaddleOCR is not installed. Using EasyOCR as fallback.')\n            return []"
         )
     
     # Write the modified content back
@@ -59,105 +59,71 @@ def patch_utils_file():
     logger.info(f"Successfully patched {utils_file}")
     return True
 
-def create_mock_modules():
-    """Create mock modules for dependencies"""
-    # Create a directory for our mock modules
-    os.makedirs("OmniParser-master/mocks", exist_ok=True)
+def add_dependency_handlers():
+    """Add proper error handling for dependencies that might be missing"""
+    # Create an error handler file
+    handler_file = "OmniParser-master/util/dependency_handler.py"
     
-    # Create an __init__.py file
-    with open("OmniParser-master/mocks/__init__.py", "w") as f:
-        f.write("# Mock modules package\n")
-    
-    # Create a mock openai module
-    with open("OmniParser-master/mocks/openai.py", "w") as f:
-        f.write("""# Mock OpenAI module
-class OpenAI:
-    def __init__(self, api_key=None, **kwargs):
-        self.api_key = api_key
-        
-    def chat(self):
-        return ChatCompletions()
-
-class ChatCompletions:
-    def create(self, *args, **kwargs):
-        return {"choices": [{"message": {"content": "This is a mock response from the OpenAI API."}}]}
-""")
-    
-    # Create a mock paddleocr module
-    with open("OmniParser-master/mocks/paddleocr.py", "w") as f:
-        f.write("""# Mock PaddleOCR module
-class PaddleOCR:
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
-        
-    def ocr(self, img_path, cls=False):
-        # Return empty result
-        return []
-""")
-    
-    # Create a mock ultralytics module
-    with open("OmniParser-master/mocks/ultralytics.py", "w") as f:
-        f.write("""# Mock ultralytics module
-import numpy as np
-
-class YOLO:
-    def __init__(self, model_path, **kwargs):
-        self.model_path = model_path
-        self.kwargs = kwargs
-        
-    def predict(self, img, **kwargs):
-        # Return empty result
-        class Results:
-            def __init__(self):
-                self.boxes = Boxes()
-                self.names = {"0": "unknown"}
-                
-        class Boxes:
-            def __init__(self):
-                self.xyxy = np.zeros((0, 4))
-                self.cls = np.zeros(0)
-                self.conf = np.zeros(0)
-                
-        return [Results()]
-""")
-    
-    # Create a mock patch for sys.modules
-    with open("OmniParser-master/util/mock_imports.py", "w") as f:
-        f.write("""# Mock imports for OmniParser
+    with open(handler_file, "w") as f:
+        f.write("""# Dependency handler for OmniParser
+import logging
 import sys
-import importlib.util
+import importlib
 import os
 
-# Add the mocks directory to sys.path
-mocks_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mocks")
-sys.path.insert(0, mocks_dir)
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("dependencies")
 
-# Mock OpenAI if needed
-if "openai" not in sys.modules:
-    try:
-        import openai
-    except ImportError:
-        import mocks.openai as openai
-        sys.modules["openai"] = openai
+def verify_dependencies():
+    """Verify that all required dependencies are installed"""
+    required_packages = [
+        "torch",
+        "torchvision",
+        "numpy",
+        "PIL",
+        "transformers",
+        "supervision",
+        "cv2",
+        "easyocr",
+        "ultralytics"
+    ]
+    
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            importlib.import_module(package)
+            logger.info(f"✓ {package} is installed")
+        except ImportError:
+            logger.error(f"✗ {package} is missing")
+            missing_packages.append(package)
+    
+    if missing_packages:
+        logger.warning(f"Missing required packages: {', '.join(missing_packages)}")
+        logger.warning("Some OmniParser functionality may not work correctly")
+    else:
+        logger.info("All required dependencies are installed")
+    
+    return len(missing_packages) == 0
 
-# Mock PaddleOCR if needed
-if "paddleocr" not in sys.modules:
+# Add proper import error handling for key packages
+def import_with_fallback(module_name, package_name=None):
+    """Import a module with proper error handling"""
+    if package_name is None:
+        package_name = module_name
+        
     try:
-        import paddleocr
+        return importlib.import_module(module_name)
     except ImportError:
-        import mocks.paddleocr as paddleocr
-        sys.modules["paddleocr"] = paddleocr
-
-# Mock ultralytics if needed
-if "ultralytics" not in sys.modules:
-    try:
-        import ultralytics
-    except ImportError:
-        import mocks.ultralytics as ultralytics
-        sys.modules["ultralytics"] = ultralytics
+        logger.error(f"Could not import {module_name}. Please install {package_name}.")
+        return None
 """)
     
-    # Modify the OmniParser's utils.py to import our patch
+    # Modify the OmniParser's utils.py to import our handler
     utils_file = "OmniParser-master/util/utils.py"
     with open(utils_file, "r") as f:
         content = f.read()
@@ -166,14 +132,14 @@ if "ultralytics" not in sys.modules:
     if "import numpy as np" in content:
         content = content.replace(
             "import numpy as np",
-            "import numpy as np\n# Import mock modules\ntry:\n    from util.mock_imports import *\nexcept ImportError:\n    pass"
+            "import numpy as np\n# Import dependency handler\ntry:\n    from util.dependency_handler import verify_dependencies, import_with_fallback\n    verify_dependencies()\nexcept ImportError:\n    pass"
         )
     
     # Write the modified content back
     with open(utils_file, "w") as f:
         f.write(content)
     
-    logger.info("Created mock modules and import patch")
+    logger.info("Added dependency handlers")
     return True
 
 def main():
@@ -184,9 +150,9 @@ def main():
         logger.error("Failed to patch utils.py file")
         return 1
     
-    # Create mock modules
-    if not create_mock_modules():
-        logger.error("Failed to create mock modules")
+    # Add dependency handlers
+    if not add_dependency_handlers():
+        logger.error("Failed to add dependency handlers")
         return 1
     
     logger.info("Patching completed successfully")
