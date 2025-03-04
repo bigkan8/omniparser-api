@@ -65,7 +65,7 @@ def add_dependency_handlers():
     handler_file = "OmniParser-master/util/dependency_handler.py"
     
     with open(handler_file, "w") as f:
-        f.write("""# Dependency handler for OmniParser
+        handler_content = """# Dependency handler for OmniParser
 import logging
 import sys
 import importlib
@@ -79,7 +79,7 @@ logging.basicConfig(
 logger = logging.getLogger("dependencies")
 
 def verify_dependencies():
-    """Verify that all required dependencies are installed"""
+    \"\"\"Verify that all required dependencies are installed\"\"\"
     required_packages = [
         "torch",
         "torchvision",
@@ -112,7 +112,7 @@ def verify_dependencies():
 
 # Add proper import error handling for key packages
 def import_with_fallback(module_name, package_name=None):
-    """Import a module with proper error handling"""
+    \"\"\"Import a module with proper error handling\"\"\"
     if package_name is None:
         package_name = module_name
         
@@ -121,7 +121,8 @@ def import_with_fallback(module_name, package_name=None):
     except ImportError:
         logger.error(f"Could not import {module_name}. Please install {package_name}.")
         return None
-""")
+"""
+        f.write(handler_content)
     
     # Modify the OmniParser's utils.py to import our handler
     utils_file = "OmniParser-master/util/utils.py"
